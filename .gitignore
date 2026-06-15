@@ -1,0 +1,38 @@
+# Build outputs
+ejecuciones/*
+!ejecuciones/README.md
+
+# Simulation and benchmark outputs
+resultados/*
+!resultados/README.md
+
+# Presentation exports and generated media
+presentacion/*
+!presentacion/README.md
+
+# Python/Jupyter cache
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+Makefile.cmake
+
+# Native build artifacts
+*.o
+*.d
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+
+# Editor and OS noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo

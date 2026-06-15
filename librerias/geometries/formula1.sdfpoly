@@ -1,0 +1,32 @@
+# lbm_sdfpoly 1
+# Imported body outline for --obstacle sdf.
+# Coordinates are normalized by length and scaled with --sdf-scale.
+# Source reference SVG: presentacion/assets/vehicles/formula_one_car.svg
+# Original source: FreeSVG/OpenClipart, Public Domain.
+v -0.500 -0.080
+v -0.485 0.030
+v -0.455 0.060
+v -0.405 0.064
+v -0.390 0.130
+v -0.340 0.145
+v -0.285 0.080
+v -0.205 0.060
+v -0.095 0.055
+v -0.040 0.112
+v 0.015 0.130
+v 0.065 0.070
+v 0.180 0.048
+v 0.320 0.030
+v 0.430 0.020
+v 0.500 -0.015
+v 0.490 -0.055
+v 0.390 -0.075
+v 0.240 -0.082
+v 0.150 -0.132
+v 0.075 -0.150
+v 0.010 -0.095
+v -0.155 -0.092
+v -0.260 -0.150
+v -0.345 -0.140
+v -0.382 -0.085
+v -0.455 -0.090

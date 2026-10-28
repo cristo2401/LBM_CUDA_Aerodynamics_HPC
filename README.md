@@ -1,113 +1,100 @@
-# Proyecto LBM 2D
+# LBM: simulación aerodinámica 2D en C++ y CUDA
 
-Simulador LBM D2Q9 en C++17 con casos de perfil alar, auto deportivo y Formula 1. La raiz queda ordenada en carpetas grandes:
+[![CPU smoke checks](https://github.com/cristo2401/LBM_CUDA_Aerodynamics_HPC/actions/workflows/cpu-smoke.yml/badge.svg)](https://github.com/cristo2401/LBM_CUDA_Aerodynamics_HPC/actions/workflows/cpu-smoke.yml)
 
-- en librerias/cuda esta la implementación en CUDA, y en librerias/src/lbm_solver.cpp, esta la implementación en C++ CPU.
+Proyecto académico de simulación de fluidos mediante **Lattice Boltzmann D2Q9**.
+Incluye un solver CPU en C++17, casos con obstáculos y perfiles alares, y un
+benchmark CUDA que compara distribuciones de memoria AoS y SoA.
 
+El objetivo es estudiar implementación numérica, exportación de campos y rendimiento
+CPU/GPU. Los casos son bidimensionales y usan unidades de malla. No constituyen
+validación para diseño aerodinámico de vehículos reales.
 
-- `librerias/`: codigo C++, headers, kernels CUDA, benchmark CUDA y geometria importada.
-- `resultados/`: frames binarios, `metadata.json`, fuerzas, diagnosticos y tiempos CUDA. Es local y se regenera con `make`.
-- `ejecuciones/`: binarios y objetos de compilacion. Es local y se regenera con `make`.
-- `notebooks/`: visualizador interactivo.
-- `presentacion/`: previews, videos o material para exponer. Es local y no se sube al repo.
-- `resto/`: espacio para material auxiliar que no sea codigo, resultados ni presentacion.
+## Vista del simulador
 
-## Compilar
+![Campo de vorticidad de una simulación 2D con perfil alar](docs/assets/airfoil-vorticity.svg)
 
-```bash
-make
-```
+Salida del solver CPU en una malla de 192 × 96 a 600 pasos. Es una ilustración de un
+transitorio, no una solución convergida ni una medición física. El comando y el
+script para regenerarla están en [la guía de la figura](docs/PREVIEW.md).
 
-El binario principal queda en:
+## Probar en CPU
 
-```text
-ejecuciones/build/lbm2d
-```
-
-Sin OpenMP:
+Requisitos: Linux, Make, compilador C++17 (por ejemplo GCC) y Python 3 para revisar
+las salidas. OpenMP se usa por defecto; no se necesita GPU ni instalar librerías Python.
 
 ```bash
-make OPENMP=0
+git clone https://github.com/cristo2401/LBM_CUDA_Aerodynamics_HPC.git
+cd LBM_CUDA_Aerodynamics_HPC
+OMP_NUM_THREADS=2 make smoke vehicle-smoke
+python3 scripts/check_smoke_outputs.py \
+  resultados/smoke_test resultados/smoke_sports_car resultados/smoke_formula1
 ```
 
-Con CMake:
+Esto compila y ejecuta tres casos cortos. La comprobación exige frames completos,
+valores finitos, densidad positiva y diagnósticos hasta el último paso. CI repite
+esos casos con y sin OpenMP. Estas pruebas detectan fallos de ejecución/exportación;
+no prueban convergencia, conservación a largo plazo ni precisión de Cd/Cl.
+
+Para compilar sin OpenMP en un directorio distinto:
+
+```bash
+make OPENMP=0 BUILD_DIR=ejecuciones/build-serial
+```
+
+También hay una configuración CMake:
 
 ```bash
 cmake -S . -B ejecuciones/cmake-build
-cmake --build ejecuciones/cmake-build -j
+cmake --build ejecuciones/cmake-build -j2
 ```
 
-## Ejecutar casos
+## Casos y salidas
 
-Prueba corta:
+| Comando | Caso | Directorio generado |
+|---|---|---|
+| `make smoke` | Obstáculo circular, prueba corta | `resultados/smoke_test` |
+| `make vehicle-smoke` | Dos contornos SDF, pruebas cortas | `resultados/smoke_sports_car`, `resultados/smoke_formula1` |
+| `make airfoil` | Perfil NACA 2412 a 6° | `resultados/airfoil` |
+| `make sports-car` | Contorno 2D de auto deportivo | `resultados/sports_car` |
+| `make formula1` | Contorno 2D de Formula 1 | `resultados/formula1` |
 
-```bash
-make smoke
-```
+Los tres últimos casos generan más frames y consumen más memoria/disco. Cada
+ejecución exporta `metadata.json`, `frames/frame_*.bin`, `forces.csv` y
+`diagnostics.csv`. Los campos float32 son `rho`, `ux`, `uy`, `pressure`,
+`vorticity`, `solid` y `phi`; el índice es `x + nx * y`.
+En Python, cada campo se reconstruye con `field.reshape(ny, nx)`.
 
-Perfil alar:
+El [notebook de visualización](notebooks/viewer.ipynb) permite explorar las salidas;
+tiene dependencias Python adicionales a las pruebas CPU anteriores.
 
-```bash
-make airfoil
-```
+## Comparación CUDA
 
-Vehiculos importados:
-
-```bash
-make vehicle-smoke
-make sports-car
-make formula1
-```
-
-Los contornos SDF/poligono estan en `librerias/geometries/`. Los resultados quedan separados por caso, por ejemplo:
-
-- `resultados/airfoil`
-- `resultados/formula1`
-- `resultados/sports_car`
-- `resultados/gpu_benchmark`
-
-## Benchmark CUDA
-
-El benchmark compara:
-
-- `cpu_reference`
-- `gpu_aos_naive`
-- `gpu_soa_optimized`
-
-Benchmark general:
+Requiere una GPU NVIDIA y CUDA Toolkit con `nvcc` compatible con C++17.
 
 ```bash
 make gpu-benchmark
 ```
 
-Benchmark usando la mascara solida del Formula 1:
+Compara `cpu_reference`, `gpu_aos_naive` y `gpu_soa_optimized`, y genera
+`resultados/gpu_benchmark/gpu_kernel_timings.csv` y `gpu_kernel_comparison.json`.
+Para usar la máscara del caso Formula 1, ejecuta `make formula1` y luego
+`make gpu-benchmark-f1`.
 
-```bash
-make formula1
-make gpu-benchmark-f1
-```
+El benchmark de kernels es un ejecutable separado del solver CPU que genera las
+simulaciones. Su tiempo no representa necesariamente la aceleración de todo el
+flujo, incluida la exportación y visualización. CI no ejecuta CUDA.
 
-Exporta `gpu_kernel_timings.csv` y `gpu_kernel_comparison.json` dentro del directorio de resultados correspondiente.
+## Dónde leer el código
 
-## Salidas
+- [Solver CPU](librerias/src/lbm_solver.cpp): evolución de la simulación.
+- [Kernels CUDA](librerias/cuda/): implementaciones AoS y SoA.
+- [Benchmark](librerias/benchmarks/gpu_lbm_benchmark.cpp): comparación de kernels.
+- [Geometrías](librerias/geometries/): contornos importados.
+- `resultados/` y `ejecuciones/`: salidas y compilación locales, regenerables.
 
-Cada caso escribe:
+## Trabajo pendiente
 
-- `metadata.json`: dimensiones, parametros, campos exportados y convencion de memoria.
-- `frames/frame_XXXXXX.bin`: campos `float32` en orden `rho`, `ux`, `uy`, `pressure`, `vorticity`, `solid`, `phi`.
-- `forces.csv`: `Fx`, `Fy`, `Cd`, `Cl`.
-- `diagnostics.csv`: masa, densidades min/max, velocidad maxima y energia cinetica.
-
-La indexacion es:
-
-```text
-index = x + nx * y
-```
-
-En Python cada campo se reconstruye con:
-
-```python
-field.reshape(ny, nx)
-```
-
-El notebook `notebooks/viewer.ipynb` lee por defecto `resultados/airfoil` y tiene una seccion especifica para `resultados/formula1` y la comparacion CUDA.
+- Validación con casos de referencia y estudios de convergencia espacial/temporal.
+- Comparación numérica CPU/GPU por campo y tolerancias documentadas.
+- Benchmarks repetidos con hardware, versiones y dispersión de tiempos registrados.

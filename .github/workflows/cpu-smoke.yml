@@ -1,0 +1,17 @@
+name: CPU smoke checks
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      matrix:
+        openmp: [0, 1]
+    env:
+      OMP_NUM_THREADS: 2
+    steps:
+      - uses: actions/checkout@v7
+      - run: make OPENMP=${{ matrix.openmp }} smoke vehicle-smoke
+      - run: python3 scripts/check_smoke_outputs.py resultados/smoke_test resultados/smoke_sports_car resultados/smoke_formula1
